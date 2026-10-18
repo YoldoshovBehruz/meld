@@ -44,6 +44,10 @@ jobs:
         run: |
           set -euo pipefail
           cd android/plugins/MeldInstaller
+          
+          # Автоматически генерируем недостающий gradle-wrapper.jar через gradle
+          gradle wrapper --gradle-version 8.8 || true
+          
           chmod +x gradlew || true
           ./gradlew assembleRelease
           cp build/outputs/aar/*-release.aar MeldInstaller.aar
