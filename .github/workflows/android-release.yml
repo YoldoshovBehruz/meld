@@ -108,6 +108,13 @@ jobs:
           export/android/java_sdk_path = "$JAVA_PATH"
           EOF
 
+      - name: Initialize Godot project filesystem
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Запускаем редактор в headless-режиме, чтобы он просканировал папку android/ и зарегистрировал шаблон
+          godot --headless --editor --quit
+
       - name: Export release APK
         shell: bash
         env:
