@@ -77,6 +77,18 @@ jobs:
           mv templates/android_release.apk "$TEMPLATE_DIR/"
           rm -rf templates templates.tpz
 
+      - name: Configure Godot Editor Settings for Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/godot
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+          cat << EOF > ~/.config/godot/editor_settings-4.tres
+          [resource]
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/java_sdk_path = "$JAVA_PATH"
+          EOF
+
       - name: Export release APK
         shell: bash
         env:
