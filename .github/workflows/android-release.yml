@@ -21,26 +21,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set version and write build info
+      - name: Set version and configure export presets
         id: version
-        shell: bash
+        shell: python3
         run: |
-          set -euo pipefail
-          VERSION_NAME=$(grep -E '^config/version=' project.godot | head -n1 | cut -d'"' -f2)
-          VERSION_CODE="$GITHUB_RUN_NUMBER"
-          test -n "$VERSION_NAME"
+          import re
+          import os
+          import json
 
-          sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg
-          sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg
-          
-          # Принудительно выставляем target_sdk=33 в export_presets.cfg для совместимости с build-tools
-          sed -i -E 's/target_sdk=.*/target_sdk=33/' export_presets.cfg || true
+          with open('project.godot', 'r', encoding='utf-8') as f:
+              proj = f.read()
 
-          printf '{"version_name":"%s","version_code":%s}\n' \
-            "$VERSION_NAME" "$VERSION_CODE" > build_info.json
+          match = re.search(r'^config/version="([^"]+)"', proj, re.M)
+          version_name = match.group(1) if match else "1.0.0"
+          version_code = os.environ.get('GITHUB_RUN_NUMBER', '1')
 
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          # Читаем и настраиваем export_presets.cfg
+          with open('export_presets.cfg', 'r', encoding='utf-8') as f:
+              presets = f.read()
+
+          # Гарантированно включаем use_gradle_build и выставляем target_sdk=33
+          if 'use_gradle_build=' in presets:
+              presets = re.sub(r'.*use_gradle_build=.*', 'custom_template/use_gradle_build=true', presets)
+          else:
+              presets = re.sub(r'(\[preset\.\d+\.options\])', r'\1\ncustom_template/use_gradle_build=true', presets)
+
+          if 'target_sdk=' in presets:
+              presets = re.sub(r'.*target_sdk=.*', 'target_sdk=33', presets)
+          else:
+              presets = re.sub(r'(\[preset\.\d+\.options\])', r'\1\ntarget_sdk=33', presets)
+
+          with open('export_presets.cfg', 'w', encoding='utf-8') as f:
+              f.write(presets)
+
+          with open('build_info.json', 'w', encoding='utf-8') as f:
+              json.dump({"version_name": version_name, "version_code": int(version_code)}, f)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"version_name={version_name}\n")
+              f.write(f"version_code={version_code}\n")
 
       # --- СБОРКА НАТИВНОГО ПЛАГИНА (AAR) НА СЕРВЕРЕ GITHUB ---
       - name: Build MeldInstaller AAR plugin
