@@ -78,6 +78,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          
+          # Устанавливаем libfontconfig1 для устранения ошибок шрифтов
+          apt-get update && apt-get install -y libfontconfig1 || true
+
           TEMPLATE_DIR="/github/home/.local/share/godot/export_templates/4.5.1.stable"
           mkdir -p "$TEMPLATE_DIR"
           
@@ -88,9 +92,9 @@ jobs:
           # Переносим файлы в системную папку шаблонов
           mv templates/* "$TEMPLATE_DIR/"
           
-          # Устанавливаем Android build template в папку android/ проекта для Custom Build
-          mkdir -p android
-          unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/
+          # РАСПАКОВЫВАЕМ ШАБЛОН СТРОГО В android/build/ ДЛЯ GODOT 4 CUSTOM BUILD
+          mkdir -p android/build
+          unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build/
           
           rm -rf templates templates.tpz
 
@@ -112,7 +116,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Запускаем редактор в headless-режиме, чтобы он просканировал папку android/ и зарегистрировал шаблон
           godot --headless --editor --quit
 
       - name: Export release APK
