@@ -40,6 +40,7 @@ jobs:
 
       # --- СБОРКА НАТИВНОГО ПЛАГИНА (AAR) НА СЕРВЕРЕ GITHUB ---
       - name: Build MeldInstaller AAR plugin
+        shell: bash
         run: |
           set -euo pipefail
           cd android/plugins/MeldInstaller
