@@ -1,3 +1,15 @@
 # Godot 4+ specific ignores
 .godot/
-/android/
+
+# Build outputs & Binaries
+/build/
+/dist/
+*.apk
+*.exe
+*.pck
+
+# Android build artifacts (сохраняем исходники плагинов, но скрываем мусор от локальныхборок)
+android/build/
+android/.gradle/
+android/plugins/**/build/
+android/plugins/**/.gradle/

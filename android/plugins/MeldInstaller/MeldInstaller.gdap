@@ -1,0 +1,9 @@
+[config]
+name="MeldInstaller"
+binary_type="local"
+binary="MeldInstaller.aar"
+
+[dependencies]
+local=[]
+remote=[]
+custom_maven_repos=[]
