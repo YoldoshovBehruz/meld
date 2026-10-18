@@ -62,6 +62,7 @@ jobs:
           echo "$KEYSTORE_B64" | base64 -d > build/release.keystore
 
       - name: Export release APK
+        shell: bash
         env:
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH: build/release.keystore
           GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEYSTORE_USER }}
