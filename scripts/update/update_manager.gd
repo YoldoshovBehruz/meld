@@ -1,11 +1,14 @@
 extends Node
 
+## Проверка, загрузка и установка обновлений Android-версии Meld.
+## Autoload: "UpdateManager".
+
 signal update_offered(info: Dictionary, forced: bool)
 signal check_finished(has_update: bool)
 signal download_progress(percent: float)
 signal download_failed(reason: String)
 
-const UPDATE_API_URL: String = "https://meldonlineserver.onrender.com/api/updates/latest"
+const UPDATE_API_URL: String = "https://github.com/YoldoshovBehruz/meld/releases/latest/download/update.json"
 const BUILD_INFO_PATH: String = "res://build_info.json"
 const DOWNLOAD_DIR: String = "user://updates"
 const STATE_PATH: String = "user://update_state.cfg"
@@ -44,9 +47,9 @@ func _ready() -> void:
 	set_process(false)
 
 	# Обновления работают только в Android-сборке с build_info.json.
-	if OS.get_name() != "Android" or not _load_build_info():
+	if not _load_build_info():
 		return
-
+	
 	_check_request = HTTPRequest.new()
 	_check_request.timeout = CHECK_TIMEOUT_SEC
 	_check_request.request_completed.connect(_on_check_completed)
@@ -99,11 +102,23 @@ func check_for_updates() -> void:
 		return
 
 	_checking = true
-	var url: String = "%s?version_code=%d" % [UPDATE_API_URL, _current_code]
+	_show_checking_popup() # Показываем красивое окно поиска при старте
 
-	if _check_request.request(url, PackedStringArray(["Accept: application/json"])) != OK:
+	if _check_request.request(UPDATE_API_URL, PackedStringArray(["Accept: application/json"])) != OK:
 		_checking = false
 		_on_check_unavailable()
+
+
+func _show_checking_popup() -> void:
+	_title_label.text = "Проверка обновлений"
+	_version_label.text = "Подождите, идёт поиск новых версий..."
+	_changelog_label.text = ""
+	_progress.visible = false
+	_later_button.visible = false
+	_retry_button.visible = false
+	_update_button.visible = false
+	_set_status("")
+	_overlay.visible = true
 
 
 func _on_check_completed(
@@ -129,6 +144,11 @@ func _on_check_completed(
 	check_finished.emit(has_update)
 
 	if not has_update:
+		_set_status("У вас установлена самая актуальная версия.")
+		# Если обновлений нет, показываем статус и плавно закрываем окно через 1.5 секунды
+		var tween = create_tween()
+		tween.tween_interval(1.5)
+		tween.tween_callback(_hide_offer)
 		return
 
 	var is_forced: bool = bool(info["mandatory"]) or _current_code < int(info["min_supported_version_code"])
@@ -137,34 +157,34 @@ func _on_check_completed(
 
 
 func _on_check_unavailable() -> void:
+	_checking = false
 	check_finished.emit(false)
 
 	var state := ConfigFile.new()
-	if state.load(STATE_PATH) != OK:
-		return
+	if state.load(STATE_PATH) == OK:
+		var cached: Variant = state.get_value("update", "manifest", {})
+		if cached is Dictionary and not cached.is_empty():
+			var min_supported: int = int(cached.get("min_supported_version_code", 0))
+			if _current_code < min_supported:
+				_info = cached
+				_show_offer("Сервер недоступен. Требуется обновление.", true)
+				return
 
-	var cached: Variant = state.get_value("update", "manifest", {})
-	if not (cached is Dictionary) or cached.is_empty():
-		return
-
-	var min_supported: int = int(cached.get("min_supported_version_code", 0))
-	if _current_code < min_supported:
-		_info = cached
-		_show_offer("Сервер временно недоступен. Повторите проверку.", true)
+	# Если интернет пропал или таймаут — сообщаем об этом и закрываем окно через 1.5 секунды
+	_set_status("Не удалось проверить обновления.")
+	var tween = create_tween()
+	tween.tween_interval(1.5)
+	tween.tween_callback(_hide_offer)
 
 
 func _validate_manifest(parsed: Variant) -> Dictionary:
-	if not (parsed is Dictionary) or not bool(parsed.get("ok", false)):
+	if not (parsed is Dictionary):
 		return {}
 
-	var raw: Variant = parsed.get("update")
-	if not (raw is Dictionary):
-		return {}
-
-	var version_code: int = int(raw.get("version_code", 0))
-	var apk_url: String = str(raw.get("apk_url", ""))
-	var sha256: String = str(raw.get("sha256", "")).to_lower()
-	var version_name: String = str(raw.get("version_name", ""))
+	var version_code: int = int(parsed.get("version_code", 0))
+	var apk_url: String = str(parsed.get("apk_url", ""))
+	var sha256: String = str(parsed.get("sha256", "")).to_lower()
+	var version_name: String = str(parsed.get("version_name", ""))
 
 	var valid: bool = (
 		version_code > 0
@@ -178,12 +198,12 @@ func _validate_manifest(parsed: Variant) -> Dictionary:
 	return {
 		"version_name": version_name,
 		"version_code": version_code,
-		"min_supported_version_code": int(raw.get("min_supported_version_code", 0)),
-		"mandatory": bool(raw.get("mandatory", false)),
+		"min_supported_version_code": int(parsed.get("min_supported_version_code", 0)),
+		"mandatory": bool(parsed.get("mandatory", false)),
 		"apk_url": apk_url,
 		"sha256": sha256,
-		"changelog": str(raw.get("changelog", "")),
-		"size_bytes": int(raw.get("size_bytes", 0))
+		"changelog": str(parsed.get("changelog", "")),
+		"size_bytes": int(parsed.get("size_bytes", 0))
 	}
 
 
@@ -388,6 +408,7 @@ func _show_offer(status: String, forced: bool = false) -> void:
 	_changelog_label.text = notes if not notes.is_empty() else "Описание изменений не указано."
 	_later_button.visible = not forced
 	_retry_button.visible = forced
+	_update_button.visible = true # Возвращаем кнопку обновить
 	_progress.visible = false
 	_set_busy(false)
 	_set_status(status)
@@ -446,6 +467,7 @@ func _load_build_info() -> bool:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BUILD_INFO_PATH))
 	if not (parsed is Dictionary):
 		return false
+
 	_current_code = int(parsed.get("version_code", 0))
 	_current_name = str(parsed.get("version_name", ""))
 	return _current_code > 0
