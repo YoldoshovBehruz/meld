@@ -32,6 +32,10 @@ jobs:
 
           sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg
           sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg
+          
+          # Принудительно выставляем target_sdk=33 в export_presets.cfg, чтобы избежать конфликтов версий build-tools
+          sed -i -E 's/target_sdk=.*/target_sdk=33/' export_presets.cfg || true
+
           printf '{"version_name":"%s","version_code":%s}\n' \
             "$VERSION_NAME" "$VERSION_CODE" > build_info.json
 
