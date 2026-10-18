@@ -45,11 +45,12 @@ jobs:
           set -euo pipefail
           cd android/plugins/MeldInstaller
           
-          # Автоматически генерируем недостающий gradle-wrapper.jar через gradle
-          gradle wrapper --gradle-version 8.8 || true
+          # Скачиваем и распаковываем Gradle 8.8 прямо в окружение сборки
+          wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip
+          unzip -q gradle-8.8-bin.zip
+          export PATH="$PWD/gradle-8.8/bin:$PATH"
           
-          chmod +x gradlew || true
-          ./gradlew assembleRelease
+          gradle assembleRelease
           cp build/outputs/aar/*-release.aar MeldInstaller.aar
           cd ../../..
 
