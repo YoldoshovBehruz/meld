@@ -61,6 +61,22 @@ jobs:
           mkdir -p build
           echo "$KEYSTORE_B64" | base64 -d > build/release.keystore
 
+      - name: Download Godot Android export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMPLATE_DIR="/github/home/.local/share/godot/export_templates/4.5.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          
+          # Скачиваем официальные экспортные шаблоны Godot 4.5.1
+          wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
+          unzip -q templates.tpz
+          
+          # Переносим нужные android файлы в системную папку шаблонов godot-ci
+          mv templates/android_debug.apk "$TEMPLATE_DIR/"
+          mv templates/android_release.apk "$TEMPLATE_DIR/"
+          rm -rf templates templates.tpz
+
       - name: Export release APK
         shell: bash
         env:
