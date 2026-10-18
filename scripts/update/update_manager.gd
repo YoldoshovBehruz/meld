@@ -449,7 +449,6 @@ func _load_build_info() -> bool:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BUILD_INFO_PATH))
 	if not (parsed is Dictionary):
 		return false
-
 	_current_code = int(parsed.get("version_code", 0))
 	_current_name = str(parsed.get("version_name", ""))
 	return _current_code > 0
