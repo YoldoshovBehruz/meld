@@ -1,18 +1,24 @@
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+    id("com.android.library") version "8.5.0"
 }
 
 android {
     namespace = "com.meld.installer"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 24
+        targetSdk = 34
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    compileOnly("org.godotengine:godot:4.5.1.stable")
-    implementation("androidx.core:core-ktx:1.13.1")
+    // Godot Android library подтягивается автоматически из окружения сборки
+    compileOnly("org.godotengine:godot:4.5.0.stable")
 }
