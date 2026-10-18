@@ -34,9 +34,15 @@ jobs:
           sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg
           sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg
 
-          # Включаем Use Gradle Build для корректной работы экспорта Android
+          # Включаем Use Gradle Build и привязываем SDK/Build-Tools к версии 33.0.2 для совместимости с контейнером
           if grep -q "gradle_build/use_gradle_build" export_presets.cfg; then
             sed -i -E 's/gradle_build\/use_gradle_build=.*/gradle_build\/use_gradle_build=true/' export_presets.cfg
+          fi
+          if grep -q "target_sdk=" export_presets.cfg; then
+            sed -i -E 's/target_sdk=.*/target_sdk=33/' export_presets.cfg
+          fi
+          if grep -q "build_tools_version=" export_presets.cfg; then
+            sed -i -E 's/build_tools_version=.*/build_tools_version="33.0.2"/' export_presets.cfg
           fi
 
           printf '{"version_name":"%s","version_code":%s}\n' \
