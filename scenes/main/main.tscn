@@ -1,0 +1,89 @@
+[gd_scene load_steps=7 format=3 uid="uid://c6awhax1qtnmw"]
+
+[ext_resource type="Script" uid="uid://bqxg01jxk8aew" path="res://scenes/main/main.gd" id="1_hyk8p"]
+[ext_resource type="PackedScene" uid="uid://cupg48blo0nsb" path="res://scenes/board/board_view.tscn" id="2_iuonh"]
+[ext_resource type="PackedScene" uid="uid://dwdy6m2hl765u" path="res://scenes/ui/hud.tscn" id="2_k2fmo"]
+[ext_resource type="PackedScene" uid="uid://d34anpukmmxfc" path="res://scenes/ui/result_screen.tscn" id="4_l3cfh"]
+[ext_resource type="PackedScene" uid="uid://jyb0bbm3kmm0" path="res://scenes/ui/main_menu.tscn" id="5_6q06x"]
+[ext_resource type="Script" uid="uid://cf6xf8la6uwe8" path="res://scenes/ui/bot_settings_modal.gd" id="6_ow5a4"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_hyk8p")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="BoardView" parent="CanvasLayer" instance=ExtResource("2_iuonh")]
+unique_name_in_owner = true
+offset_top = 86.0
+
+[node name="HUD" parent="CanvasLayer" instance=ExtResource("2_k2fmo")]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="ResultScreen" parent="CanvasLayer" instance=ExtResource("4_l3cfh")]
+unique_name_in_owner = true
+visible = false
+
+[node name="MainMenu" parent="CanvasLayer" instance=ExtResource("5_6q06x")]
+unique_name_in_owner = true
+
+[node name="BotSettingsModal" type="Panel" parent="CanvasLayer" node_paths=PackedStringArray("difficulty_label", "turn_label", "color_label")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(750, 500)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -375.0
+offset_top = -250.0
+offset_right = 375.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_ow5a4")
+difficulty_label = NodePath("Difficulty")
+turn_label = NodePath("TurnLabel")
+color_label = NodePath("ColorLabel")
+
+[node name="Diff" type="OptionButton" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 32.0
+offset_bottom = 20.0
+
+[node name="Turn" type="OptionButton" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 32.0
+offset_bottom = 20.0
+
+[node name="Color" type="OptionButton" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 32.0
+offset_bottom = 20.0
+
+[node name="Start" type="Button" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="Back" type="Button" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="Difficulty" type="Label" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="TurnLabel" type="Label" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ColorLabel" type="Label" parent="CanvasLayer/BotSettingsModal"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[editable path="CanvasLayer/BoardView"]

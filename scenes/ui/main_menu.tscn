@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=3 uid="uid://jyb0bbm3kmm0"]
+
+[ext_resource type="Script" uid="uid://qcf0wkr2heqp" path="res://scenes/ui/main_menu.gd" id="1_sl1te"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_sl1te")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.12, 0.15, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainContainer" type="VBoxContainer" parent="CenterContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/MainContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "СЕТКА И ФИГУРЫ"
+horizontal_alignment = 1
+
+[node name="Control" type="Control" parent="CenterContainer/MainContainer"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="CenterContainer/MainContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 35
+text = "ИГРАТЬ"
+
+[node name="SettingsButton" type="Button" parent="CenterContainer/MainContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ExitButton" type="Button" parent="CenterContainer/MainContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 35
+text = "ВЫХОД"
+
+[node name="ModeContainer" type="VBoxContainer" parent="CenterContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LocalPVPButton" type="Button" parent="CenterContainer/ModeContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 35
+text = "НА ОДНОМ УСТРОЙСТВЕ"
+
+[node name="VSBotButton" type="Button" parent="CenterContainer/ModeContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 35
+text = "ПРОТИВ БОТА"
+
+[node name="LanPVPButton" type="Button" parent="CenterContainer/ModeContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 35
+text = "Играть по сети"
+
+[node name="BackButton" type="Button" parent="CenterContainer/ModeContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 25
+text = "НАЗАД"

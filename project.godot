@@ -1,0 +1,36 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Meld"
+run/main_scene="uid://c6awhax1qtnmw"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+boot_splash/image="uid://cbooab3idikkh"
+config/icon="res://icon.svg"
+
+[autoload]
+
+UpdateManager="*res://scripts/update/update_manager.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/Godot-File-Picker-main/godot/plugin.cfg")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
