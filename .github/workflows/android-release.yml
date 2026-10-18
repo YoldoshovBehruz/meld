@@ -85,9 +85,8 @@ jobs:
           wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
           unzip -q templates.tpz
           
-          # Переносим нужные android файлы в системную папку шаблонов godot-ci
-          mv templates/android_debug.apk "$TEMPLATE_DIR/"
-          mv templates/android_release.apk "$TEMPLATE_DIR/"
+          # Переносим ВСЕ файлы шаблонов (включая android_source.zip) в системную папку
+          mv templates/* "$TEMPLATE_DIR/"
           rm -rf templates templates.tpz
 
       - name: Configure Godot Editor Settings for Android
