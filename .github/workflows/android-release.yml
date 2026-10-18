@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
           cd android/plugins/MeldInstaller
           chmod +x gradlew || true
-          gradle assembleRelease
+          ./gradlew assembleRelease
           cp build/outputs/aar/*-release.aar MeldInstaller.aar
           cd ../../..
 
