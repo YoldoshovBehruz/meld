@@ -23,6 +23,7 @@ var score_manager: ScoreManager
 var audio_manager: AudioManager
 var theme_manager: ThemeManager
 var save_manager: SaveManager
+var update_manager: Node
 
 var easy_bot: EasyBot
 var medium_bot: MediumBot
@@ -82,6 +83,13 @@ func _ready() -> void:
 	save_manager = SaveManager.new()
 	save_manager.name = "SaveManagerRuntime"
 	add_child(save_manager)
+
+	# Инициализируем систему автоматического обновления при запускe.
+	var update_script = load("res://scripts/update/update_manager.gd")
+	if update_script:
+		update_manager = update_script.new()
+		update_manager.name = "UpdateManagerRuntime"
+		add_child(update_manager)
 	
 	# Подключаем локальный профиль к главному меню.
 	if main_menu.has_method("setup_profile"):
@@ -808,8 +816,8 @@ func _start_game(starting_player: Enums.Player) -> void:
 
 	if hud and hud.has_method("set_player_names"):
 		hud.set_player_names(player1_name, player2_name)
-	
-		# Аватарки в HUD.
+
+	# Аватарки в HUD.
 	if hud and hud.has_method("set_player_avatars"):
 		var my_role := "player1" if local_net_player == Enums.Player.PLAYER_1 else "player2"
 		var opp_role := "player2" if my_role == "player1" else "player1"
@@ -829,7 +837,7 @@ func _start_game(starting_player: Enums.Player) -> void:
 		else:
 			# Локальный и бот — только своя аватарка слева.
 			hud.set_player_avatars(my_tex, null)
-	
+
 	board_data.reset()
 	turn_manager.reset()
 	score_manager.reset()
@@ -917,7 +925,7 @@ func _execute_move(coord: Vector2i) -> void:
 				true
 			)
 
-		await get_tree().create_timer(0.5).timeout
+		await get_tree().createtimer(0.5).timeout
 
 	if (
 		board_data.get_occupied_count()

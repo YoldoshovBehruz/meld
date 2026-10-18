@@ -1,8 +1,5 @@
 extends Node
 
-## Проверка, загрузка и установка обновлений Android-версии Meld.
-## Autoload: "UpdateManager".
-
 signal update_offered(info: Dictionary, forced: bool)
 signal check_finished(has_update: bool)
 signal download_progress(percent: float)
