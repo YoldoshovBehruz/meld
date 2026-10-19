@@ -1,3 +1,4 @@
+# scripts/detection/pattern_detector.gd
 class_name PatternDetector
 extends RefCounted
 
@@ -37,19 +38,16 @@ func _detect_x(board_data: BoardData, last_coord: Vector2i, result: Array[Patter
 	for offset in possible_center_offsets:
 		var center := last_coord + offset
 		
-		# 4 диагонали (должны быть закрашены)
 		var c_top_left := center + Vector2i(-1, -1)
 		var c_top_right := center + Vector2i(1, -1)
 		var c_bottom_left := center + Vector2i(-1, 1)
 		var c_bottom_right := center + Vector2i(1, 1)
 
-		# 4 промежуточные клетки между концами Х (должны быть ПУСТЫМИ)
 		var top := center + Vector2i(0, -1)
 		var bottom := center + Vector2i(0, 1)
 		var left := center + Vector2i(-1, 0)
 		var right := center + Vector2i(1, 0)
 
-		# 1. Проверяем, что центр и все 4 диагонали закрашены
 		if not (board_data.is_occupied(center) \
 		   and board_data.is_occupied(c_top_left) \
 		   and board_data.is_occupied(c_top_right) \
@@ -57,7 +55,6 @@ func _detect_x(board_data: BoardData, last_coord: Vector2i, result: Array[Patter
 		   and board_data.is_occupied(c_bottom_right)):
 			continue
 
-		# 2. Проверяем, что пространство вокруг Х строго пустое
 		if board_data.is_empty(top) \
 		   and board_data.is_empty(bottom) \
 		   and board_data.is_empty(left) \
@@ -74,30 +71,25 @@ func _detect_reverse_x(board_data: BoardData, last_coord: Vector2i, result: Arra
 	]
 
 	for center in possible_centers:
-		# Центр должен быть строго пустым
 		if not board_data.is_empty(center):
 			continue
 
-		# 4 лепестка креста (должны быть закрашены)
 		var top := center + Vector2i(0, -1)
 		var bottom := center + Vector2i(0, 1)
 		var left := center + Vector2i(-1, 0)
 		var right := center + Vector2i(1, 0)
 
-		# 4 угловые клетки вокруг креста (должны быть ПУСТЫМИ)
 		var top_left := center + Vector2i(-1, -1)
 		var top_right := center + Vector2i(1, -1)
 		var bottom_left := center + Vector2i(-1, 1)
 		var bottom_right := center + Vector2i(1, 1)
 
-		# 1. Проверяем, что 4 лепестка закрашены
 		if not (board_data.is_occupied(top) \
 		   and board_data.is_occupied(bottom) \
 		   and board_data.is_occupied(left) \
 		   and board_data.is_occupied(right)):
 			continue
 
-		# 2. Проверяем, что углы вокруг креста строго пустые
 		if board_data.is_empty(top_left) \
 		   and board_data.is_empty(top_right) \
 		   and board_data.is_empty(bottom_left) \
@@ -109,7 +101,7 @@ func _detect_lines(board_data: BoardData, last_coord: Vector2i, result: Array[Pa
 	# 1. Горизонтальная линия
 	var h_full := true
 	var h_cells: Array[Vector2i] = []
-	for x in range(BoardData.GRID_SIZE):
+	for x in range(board_data.grid_size):
 		var coord := Vector2i(x, last_coord.y)
 		if not board_data.is_occupied(coord):
 			h_full = false
@@ -122,7 +114,7 @@ func _detect_lines(board_data: BoardData, last_coord: Vector2i, result: Array[Pa
 	# 2. Вертикальная линия
 	var v_full := true
 	var v_cells: Array[Vector2i] = []
-	for y in range(BoardData.GRID_SIZE):
+	for y in range(board_data.grid_size):
 		var coord := Vector2i(last_coord.x, y)
 		if not board_data.is_occupied(coord):
 			v_full = false

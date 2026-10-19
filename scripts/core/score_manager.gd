@@ -1,3 +1,4 @@
+# scripts/core/score_manager.gd
 class_name ScoreManager
 extends RefCounted
 
@@ -8,6 +9,14 @@ var p2_score: int = 0
 
 var total_figures_created: int = 0
 var max_combo: int = 0
+
+# Счетчики для метрик кампании/дейли (аккумулируются только для локального игрока)
+var pattern_counts: Dictionary = {
+	&"square": 0,
+	&"cross": 0,
+	&"reverse_cross": 0,
+	&"line": 0
+}
 
 var _scored_pattern_ids: Dictionary = {}
 var _highlighted_cells: Dictionary = {}
@@ -25,11 +34,17 @@ func reset() -> void:
 	p2_score = 0
 	total_figures_created = 0
 	max_combo = 0
+	pattern_counts = {
+		&"square": 0,
+		&"cross": 0,
+		&"reverse_cross": 0,
+		&"line": 0
+	}
 	_scored_pattern_ids.clear()
 	_highlighted_cells.clear()
 	score_changed.emit(p1_score, p2_score)
 
-func process_patterns(patterns: Array[PatternInstance], active_player: Enums.Player) -> Dictionary:
+func process_patterns(patterns: Array[PatternInstance], active_player: Enums.Player, is_local_player: bool = true) -> Dictionary:
 	var best_pattern: PatternInstance = null
 	var max_points := 0
 
@@ -57,6 +72,18 @@ func process_patterns(patterns: Array[PatternInstance], active_player: Enums.Pla
 		p2_score += max_points
 
 	score_changed.emit(p1_score, p2_score)
+
+	# Засчитываем метрики для локального игрока
+	if is_local_player:
+		match best_pattern.type:
+			Enums.PatternType.SQUARE_2X2:
+				pattern_counts[&"square"] = pattern_counts.get(&"square", 0) + 1
+			Enums.PatternType.PATTERN_X:
+				pattern_counts[&"cross"] = pattern_counts.get(&"cross", 0) + 1
+			Enums.PatternType.REVERSE_X:
+				pattern_counts[&"reverse_cross"] = pattern_counts.get(&"reverse_cross", 0) + 1
+			Enums.PatternType.FULL_LINE_H, Enums.PatternType.FULL_LINE_V:
+				pattern_counts[&"line"] = pattern_counts.get(&"line", 0) + 1
 
 	var new_highlighted_cells: Array[Vector2i] = []
 	for cell in best_pattern.occupied_cells:

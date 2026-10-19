@@ -20,6 +20,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 UpdateManager="*res://scripts/update/update_manager.gd"
+GameEvents="*res://autoload/game_events.gd"
+CampaignManager="*res://autoload/campaign_manager.gd"
 
 [display]
 

@@ -1,25 +1,27 @@
+# scripts/core/board_data.gd
 class_name BoardData
 extends RefCounted
 
-const GRID_SIZE: int = 10
+var grid_size: int = 10
 
 var _grid: Array = []
 var _occupied_count: int = 0
 
-func _init() -> void:
+func _init(p_grid_size: int = 10) -> void:
+	grid_size = p_grid_size
 	reset()
 
 func reset() -> void:
 	_grid.clear()
 	_occupied_count = 0
-	for x in range(GRID_SIZE):
+	for x in range(grid_size):
 		var column: Array[Enums.Player] = []
-		for y in range(GRID_SIZE):
+		for y in range(grid_size):
 			column.append(Enums.Player.NONE)
 		_grid.append(column)
 
 func is_valid_coord(coord: Vector2i) -> bool:
-	return coord.x >= 0 and coord.x < GRID_SIZE and coord.y >= 0 and coord.y < GRID_SIZE
+	return coord.x >= 0 and coord.x < grid_size and coord.y >= 0 and coord.y < grid_size
 
 func get_cell(coord: Vector2i) -> Enums.Player:
 	if not is_valid_coord(coord):

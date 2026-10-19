@@ -84,7 +84,7 @@ func _ready() -> void:
 	save_manager.name = "SaveManagerRuntime"
 	add_child(save_manager)
 
-	# Инициализируем систему автоматического обновления при запускe.
+	# Инициализируем систему автоматического обновления при запуске.
 	var update_script = load("res://scripts/update/update_manager.gd")
 	if update_script:
 		update_manager = update_script.new()
@@ -192,7 +192,6 @@ func _setup_pause_ui() -> void:
 
 
 func _toggle_pause() -> void:
-	# Локальная пауза не должна рассинхронизировать сетевую игру.
 	if current_mode == Enums.GameMode.LAN_PVP:
 		return
 
@@ -215,7 +214,6 @@ func _resume_game() -> void:
 
 
 func _return_to_main_menu() -> void:
-	# Сохраняем игровое время, даже если матч покинули раньше окончания.
 	if save_manager:
 		save_manager.set_playtime_active(false)
 
@@ -262,8 +260,6 @@ func _on_mode_selected(mode: Enums.GameMode) -> void:
 				_start_new_pvp_game()
 
 		Enums.GameMode.LAN_PVP:
-			# LAN_PVP есть в Enums.GameMode. Сначала гарантируем, что окно
-			# сетевой игры найдено/создано, и только потом скрываем меню.
 			if network_modal == null:
 				var scene_path := "res://scenes/ui/network_modal.tscn"
 
@@ -409,6 +405,12 @@ func _connect_to_relay() -> void:
 		network_modal.set_status("Подключение к облачному серверу...")
 
 
+# Добавленный обработчик, устраняющий ошибку с отсутствием функции
+func _on_connected_to_server() -> void:
+	if network_modal:
+		network_modal.set_status("Успешное подключение! Ожидание роли...")
+
+
 func _close_network() -> void:
 	if ws_client != null:
 		if ws_client.get_ready_state() != WebSocketPeer.STATE_CLOSED:
@@ -444,7 +446,6 @@ func _poll_network() -> void:
 		_ws_was_open = true
 		_ws_attempting_connect = false
 
-		# Отправляем join только после открытия WebSocket.
 		if not _ws_join_sent:
 			var join_payload := {
 				"type": "join",
@@ -610,7 +611,6 @@ func _handle_network_message(data: Dictionary) -> void:
 
 
 func _handle_network_disconnected() -> void:
-	# После потери соединения сетевой матч продолжать нельзя.
 	if ws_client == null:
 		return
 
@@ -804,7 +804,6 @@ func _start_game(starting_player: Enums.Player) -> void:
 		pause_modal.close()
 
 	if pause_button:
-		# В LAN пауза отключена во избежание рассинхронизации.
 		pause_button.visible = current_mode != Enums.GameMode.LAN_PVP
 
 	result_screen.hide_results()
@@ -814,10 +813,10 @@ func _start_game(starting_player: Enums.Player) -> void:
 	if save_manager:
 		save_manager.set_playtime_active(true)
 
+	# Передаем актуальные ники игроков в HUD
 	if hud and hud.has_method("set_player_names"):
 		hud.set_player_names(player1_name, player2_name)
 
-	# Аватарки в HUD.
 	if hud and hud.has_method("set_player_avatars"):
 		var my_role := "player1" if local_net_player == Enums.Player.PLAYER_1 else "player2"
 		var opp_role := "player2" if my_role == "player1" else "player1"
@@ -835,7 +834,6 @@ func _start_game(starting_player: Enums.Player) -> void:
 			else:
 				hud.set_player_avatars(opp_tex, my_tex)
 		else:
-			# Локальный и бот — только своя аватарка слева.
 			hud.set_player_avatars(my_tex, null)
 
 	board_data.reset()
@@ -881,7 +879,6 @@ func _on_cell_clicked(coord: Vector2i) -> void:
 
 
 func _execute_move(coord: Vector2i) -> void:
-	# Проверяем координаты, включая полученные из сети.
 	if (
 		coord.x < 0
 		or coord.y < 0
@@ -958,7 +955,6 @@ func _on_turn_changed(new_player: Enums.Player) -> void:
 				active_local_player
 			)
 
-	# Для наблюдателя показываем имя реального игрока, чей сейчас ход.
 	if (
 		current_mode == Enums.GameMode.LAN_PVP
 		and local_role == Enums.LobbyRole.SPECTATOR
@@ -993,9 +989,6 @@ func _update_spectator_turn_status(
 		status_control = _find_turn_status_control_by_name(hud)
 
 	if status_control == null:
-		push_warning(
-			"Не найден Label/RichTextLabel статуса хода в HUD."
-		)
 		return
 
 	if status_control is Label:
@@ -1005,7 +998,6 @@ func _update_spectator_turn_status(
 			"font_color",
 			active_color
 		)
-
 	elif status_control is RichTextLabel:
 		var rich_status_label := status_control as RichTextLabel
 		rich_status_label.text = status_text
@@ -1020,22 +1012,16 @@ func _find_turn_status_control_by_text(node: Node) -> Control:
 		if child is Label:
 			var label := child as Label
 			var label_text := label.text.to_lower()
-
 			if label_text.contains("ход") or label_text.contains("turn"):
 				return label
-
 		elif child is RichTextLabel:
 			var rich_label := child as RichTextLabel
 			var rich_text := rich_label.text.to_lower()
-
 			if rich_text.contains("ход") or rich_text.contains("turn"):
 				return rich_label
-
 		var nested_result := _find_turn_status_control_by_text(child)
-
 		if nested_result != null:
 			return nested_result
-
 	return null
 
 
@@ -1043,19 +1029,15 @@ func _find_turn_status_control_by_name(node: Node) -> Control:
 	for child in node.get_children():
 		if child is Label or child is RichTextLabel:
 			var node_name := str(child.name).to_lower()
-
 			if (
 				node_name.contains("turn")
 				or node_name.contains("status")
 				or node_name.contains("ход")
 			):
 				return child as Control
-
 		var nested_result := _find_turn_status_control_by_name(child)
-
 		if nested_result != null:
 			return nested_result
-
 	return null
 
 
@@ -1128,7 +1110,6 @@ func _end_game() -> void:
 		else score_manager.p1_score
 	)
 
-	# Засчитываем только завершённые матчи.
 	if save_manager and match_completed:
 		if current_mode == Enums.GameMode.VS_BOT:
 			save_manager.record_game("bot", my_score > opponent_score)
