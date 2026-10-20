@@ -15,9 +15,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies (FontConfig, curl)
+      - name: Install System Dependencies (FontConfig, curl, gradle)
         run: |
-          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl
+          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl gradle
 
       - name: Setup Android SDK & Build Templates
         run: |
@@ -52,17 +52,28 @@ jobs:
           set -euo pipefail
           if [ -d "android/plugins/MeldInstaller" ]; then
             cd android/plugins/MeldInstaller
+            
+            # Генерация gradle wrapper, если его нет в репозитории
+            if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+              echo "Gradle wrapper jar missing. Generating wrapper..."
+              gradle wrapper --gradle-version 8.0 || true
+            fi
+            
             if [ -f "gradlew" ]; then
               chmod +x gradlew
-              ./gradlew assembleRelease
+              ./gradlew assembleRelease --no-daemon
             else
-              gradle assembleRelease
+              gradle assembleRelease --no-daemon
             fi
+            
             mkdir -p build/outputs/aar
             if compgen -G "build/outputs/aar/*-release.aar" > /dev/null; then
               cp build/outputs/aar/*-release.aar MeldInstaller.aar
             elif compgen -G "build/outputs/aar/*.aar" > /dev/null; then
               cp build/outputs/aar/*.aar MeldInstaller.aar
+            else
+              echo "Error: AAR file not found after build!"
+              exit 1
             fi
             cd ../../..
           fi
