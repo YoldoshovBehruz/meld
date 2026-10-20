@@ -15,25 +15,34 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies (FontConfig)
+      - name: Install System Dependencies (FontConfig, curl)
         run: |
-          apt-get update && apt-get install -y libfontconfig1 unzip python3
+          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl
 
       - name: Setup Android SDK & Build Templates
         run: |
-          mkdir -p ~/.local/share/godot/export_templates/4.5.1.stable/
+          GODOT_VERSION="4.5.1.stable"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/$GODOT_VERSION"
+          
+          mkdir -p "$TEMPLATE_DIR"
           
           # Скачиваем официальные шаблоны экспорта Godot 4.5.1
           wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
-          unzip -q templates.tpz -d ~/.local/share/godot/export_templates/
-          mv ~/.local/share/godot/export_templates/templates ~/.local/share/godot/export_templates/4.5.1.stable
-
+          
+          # Распаковываем во временную папку
+          unzip -q templates.tpz -d temp_templates
+          
+          # Копируем содержимое в целевую директорию Godot
+          cp -r temp_templates/templates/* "$TEMPLATE_DIR/"
+          
           # Распаковываем android_source.zip в папку android/build проекта для Custom Build
           mkdir -p android/build
-          if [ -f ~/.local/share/godot/export_templates/4.5.1.stable/android_source.zip ]; then
-            unzip -q ~/.local/share/godot/export_templates/4.5.1.stable/android_source.zip -d android/build
+          if [ -f "$TEMPLATE_DIR/android_source.zip" ]; then
+            unzip -q "$TEMPLATE_DIR/android_source.zip" -J -d android/build || unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build
+            echo "Android source successfully extracted."
           else
-            echo "Error: android_source.zip not found in templates!"
+            echo "Error: android_source.zip not found in $TEMPLATE_DIR!"
+            ls -la "$TEMPLATE_DIR"
             exit 1
           fi
 
@@ -43,9 +52,18 @@ jobs:
           set -euo pipefail
           if [ -d "android/plugins/MeldInstaller" ]; then
             cd android/plugins/MeldInstaller
-            chmod +x gradlew || true
-            gradle assembleRelease
-            cp build/outputs/aar/*-release.aar MeldInstaller.aar
+            if [ -f "gradlew" ]; then
+              chmod +x gradlew
+              ./gradlew assembleRelease
+            else
+              gradle assembleRelease
+            fi
+            mkdir -p build/outputs/aar
+            if compgen -G "build/outputs/aar/*-release.aar" > /dev/null; then
+              cp build/outputs/aar/*-release.aar MeldInstaller.aar
+            elif compgen -G "build/outputs/aar/*.aar" > /dev/null; then
+              cp build/outputs/aar/*.aar MeldInstaller.aar
+            fi
             cd ../../..
           fi
 
@@ -80,3 +98,25 @@ jobs:
         with:
           name: meld-release-apk
           path: build/release/meld.apk
+
+      - name: Send Telegram Notification
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            STATUS="${{ job.status }}"
+            if [ "$STATUS" == "success" ]; then
+              TEXT="✅ *Сборка Android (Meld) успешно завершена!*%0A📦 Репозиторий: $GITHUB_REPOSITORY%0A🔗 Ветка: $GITHUB_REF_NAME"
+            else
+              TEXT="❌ *Сборка Android (Meld) завершилась с ошибкой!*%0A📦 Репозиторий: $GITHUB_REPOSITORY%0A🔗 Ветка: $GITHUB_REF_NAME"
+            fi
+            
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
+              -d "text=$TEXT" \
+              -d "parse_mode=Markdown"
+          else
+            echo "Telegram secrets not configured, skipping notification."
+          fi
