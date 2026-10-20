@@ -31,31 +31,27 @@ jobs:
           VERSION_CODE="$GITHUB_RUN_NUMBER"
           test -n "$VERSION_NAME"
           
-          # Автоматически обновляем версию и включаем плагин MeldInstaller в export_presets.cfg через Python
-          python3 -c '
-          filename = "export_presets.cfg"
-          with open(filename, "r", encoding="utf-8") as f:
-              content = f.read()
-
-          # Заменяем версию
-          import re
-          content = re.sub(r"^version/code=.*$", f"version/code={${VERSION_CODE}}", content, flags=re.M)
-          content = re.sub(r"^version/name=.*$", f"version/name=\"{VERSION_NAME}\"", content, flags=re.M)
-          content = re.sub(r"^gradle_build/use_gradle_build=.*$", "gradle_build/use_gradle_build=true", content, flags=re.M)
-          content = re.sub(r"^gradle_build/target_sdk=.*$", "gradle_build/target_sdk=\"33\"", content, flags=re.M)
-          content = re.sub(r"^gradle_build/build_tools_version=.*$", "gradle_build/build_tools_version=\"33.0.2\"", content, flags=re.M)
-
-          # Гарантированно включаем наш плагин MeldInstaller
-          if "plugins/MeldInstaller=" in content:
-              content = re.sub(r"^plugins/MeldInstaller=.*$", "plugins/MeldInstaller=true", content, flags=re.M)
-          else:
-              # Если строки не было, добавляем ее в секцию [preset.0.options]
-              content = content.replace("[preset.0.options]", "[preset.0.options]\nplugins/MeldInstaller=true")
-
-          with open(filename, "w", encoding="utf-8") as f:
-              f.write(content)
-          '
-
+          # Безопасно обновляем параметры в export_presets.cfg через sed
+          sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg || true
+          sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg || true
+          
+          if grep -q "gradle_build/use_gradle_build" export_presets.cfg; then
+            sed -i -E 's/gradle_build\/use_gradle_build=.*/gradle_build\/use_gradle_build=true/' export_presets.cfg
+          fi
+          if grep -q "target_sdk=" export_presets.cfg; then
+            sed -i -E 's/target_sdk=.*/target_sdk="33"/' export_presets.cfg
+          fi
+          if grep -q "build_tools_version=" export_presets.cfg; then
+            sed -i -E 's/build_tools_version=.*/build_tools_version="33.0.2"/' export_presets.cfg
+          fi
+          
+          # Гарантированно включаем плагин MeldInstaller в пресеты
+          if grep -q "plugins/MeldInstaller=" export_presets.cfg; then
+            sed -i -E 's/plugins\/MeldInstaller=.*/plugins\/MeldInstaller=true/' export_presets.cfg
+          else
+            sed -i '/\[preset.0.options\]/a plugins/MeldInstaller=true' export_presets.cfg
+          fi
+          
           printf '{"version_name":"%s","version_code":%s}\n' \
             "$VERSION_NAME" "$VERSION_CODE" > build_info.json
             
