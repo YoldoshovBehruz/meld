@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://bgg3ywxvj8pko"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_7lpby"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_xoj2k"]
+
+[sub_resource type="Resource" id="Resource_7lpby"]
+script = ExtResource("1_7lpby")
+metric = 1
+op = 1
+target = 5
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_xoj2k"]
+script = ExtResource("1_7lpby")
+metric = 1
+op = 1
+target = 4
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_iff3q"]
+script = ExtResource("1_7lpby")
+metric = 3
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_xoj2k")
+id = &"lvl_01"
+title = "Первый квадрат"
+order = 1
+max_moves = 6
+required = Array[ExtResource("1_7lpby")]([SubResource("Resource_iff3q")])
+bonus = Array[ExtResource("1_7lpby")]([SubResource("Resource_7lpby"), SubResource("Resource_xoj2k")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://dishnnm5pfpjg"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_xtois"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_5nt7f"]
+
+[sub_resource type="Resource" id="Resource_xtois"]
+script = ExtResource("1_xtois")
+metric = 1
+op = 1
+target = 9
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_5nt7f"]
+script = ExtResource("1_xtois")
+metric = 1
+op = 1
+target = 8
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_3ychk"]
+script = ExtResource("1_xtois")
+metric = 3
+target = 3
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_5nt7f")
+id = &"lvl_15"
+title = "Тесное поле"
+order = 7
+board_size = 6
+max_moves = 12
+required = Array[ExtResource("1_xtois")]([SubResource("Resource_3ychk")])
+bonus = Array[ExtResource("1_xtois")]([SubResource("Resource_xtois"), SubResource("Resource_5nt7f")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

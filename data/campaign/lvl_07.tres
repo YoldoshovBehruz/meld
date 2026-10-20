@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://ci3xlesey0mmj"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_4fi1g"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_5wkit"]
+
+[sub_resource type="Resource" id="Resource_4fi1g"]
+script = ExtResource("1_4fi1g")
+metric = 1
+op = 1
+target = 22
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_5wkit"]
+script = ExtResource("1_4fi1g")
+metric = 3
+target = 2
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_b2872"]
+script = ExtResource("1_4fi1g")
+metric = 6
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_5wkit")
+id = &"lvl_07"
+title = "Первая линия"
+order = 5
+max_moves = 25
+required = Array[ExtResource("1_4fi1g")]([SubResource("Resource_b2872")])
+bonus = Array[ExtResource("1_4fi1g")]([SubResource("Resource_4fi1g"), SubResource("Resource_5wkit")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

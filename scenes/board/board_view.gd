@@ -9,15 +9,15 @@ const CELL_VIEW_SCENE = preload("res://scenes/board/cell_view.tscn")
 var _cells: Dictionary = {}
 var _current_theme_data: Dictionary
 
-func create_board() -> void:
+func create_board(size: int = BoardData.GRID_SIZE) -> void:
 	for child in grid_container.get_children():
 		child.queue_free()
 	_cells.clear()
 
-	grid_container.columns = BoardData.GRID_SIZE
+	grid_container.columns = size
 
-	for y in range(BoardData.GRID_SIZE):
-		for x in range(BoardData.GRID_SIZE):
+	for y in range(size):
+		for x in range(size):
 			var coord := Vector2i(x, y)
 			var cell_instance: CellView = CELL_VIEW_SCENE.instantiate()
 			grid_container.add_child(cell_instance)

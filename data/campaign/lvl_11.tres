@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://bt60ihpn112is"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_ak2r5"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_3icwe"]
+
+[sub_resource type="Resource" id="Resource_ak2r5"]
+script = ExtResource("1_ak2r5")
+target = 20
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_3icwe"]
+script = ExtResource("1_ak2r5")
+metric = 4
+target = 2
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_0k7yg"]
+script = ExtResource("1_ak2r5")
+metric = 7
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_3icwe")
+id = &"lvl_11"
+title = "Тихий ход"
+order = 8
+bot_difficulty = 0
+required = Array[ExtResource("1_ak2r5")]([SubResource("Resource_0k7yg")])
+bonus = Array[ExtResource("1_ak2r5")]([SubResource("Resource_ak2r5"), SubResource("Resource_3icwe")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

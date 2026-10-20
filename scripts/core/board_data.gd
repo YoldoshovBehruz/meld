@@ -2,6 +2,8 @@
 class_name BoardData
 extends RefCounted
 
+const GRID_SIZE: int = 10
+
 var grid_size: int = 10
 
 var _grid: Array = []

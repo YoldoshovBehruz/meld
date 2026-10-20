@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://q74okwxy3inx"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_s25h8"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_k2dj3"]
+
+[sub_resource type="Resource" id="Resource_s25h8"]
+script = ExtResource("1_s25h8")
+metric = 1
+op = 1
+target = 11
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_k2dj3"]
+script = ExtResource("1_s25h8")
+metric = 1
+op = 1
+target = 10
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_mmxw0"]
+script = ExtResource("1_s25h8")
+metric = 3
+target = 4
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_k2dj3")
+id = &"lvl_02"
+title = "Четыре в ряд"
+order = 2
+max_moves = 14
+required = Array[ExtResource("1_s25h8")]([SubResource("Resource_mmxw0")])
+bonus = Array[ExtResource("1_s25h8")]([SubResource("Resource_s25h8"), SubResource("Resource_k2dj3")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

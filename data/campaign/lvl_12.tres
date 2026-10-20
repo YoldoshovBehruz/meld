@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://cui46rpov48cu"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_y4hrm"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_614we"]
+
+[sub_resource type="Resource" id="Resource_y4hrm"]
+script = ExtResource("1_y4hrm")
+target = 25
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_614we"]
+script = ExtResource("1_y4hrm")
+metric = 6
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_h4fyq"]
+script = ExtResource("1_y4hrm")
+metric = 7
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_614we")
+id = &"lvl_12"
+title = "Первая победа"
+order = 9
+bot_difficulty = 1
+required = Array[ExtResource("1_y4hrm")]([SubResource("Resource_h4fyq")])
+bonus = Array[ExtResource("1_y4hrm")]([SubResource("Resource_y4hrm"), SubResource("Resource_614we")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

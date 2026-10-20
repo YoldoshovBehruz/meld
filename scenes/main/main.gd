@@ -65,6 +65,11 @@ var lobby_members: Dictionary = {}
 
 var is_game_over: bool = false
 
+var campaign_level: LevelDefinition = null
+
+var _moves_made: int = 0
+
+var campaign_menu: CampaignMenu
 
 func _ready() -> void:
 	theme_manager = ThemeManager.new()
@@ -102,6 +107,7 @@ func _ready() -> void:
 	hard_bot = HardBot.new()
 
 	_setup_pause_ui()
+	_setup_campaign_menu()
 
 	board_view.cell_clicked.connect(_on_cell_clicked)
 	turn_manager.turn_changed.connect(_on_turn_changed)
@@ -222,6 +228,7 @@ func _return_to_main_menu() -> void:
 
 	get_tree().paused = false
 	current_mode = Enums.GameMode.LOCAL_PVP
+	campaign_level = null
 
 	if pause_modal:
 		pause_modal.close()
@@ -249,6 +256,7 @@ func _return_to_main_menu() -> void:
 
 
 func _on_mode_selected(mode: Enums.GameMode) -> void:
+	campaign_level = null
 	current_mode = mode
 
 	match mode:
@@ -334,6 +342,9 @@ func _on_theme_changed(_new_theme: Enums.ThemeStyle) -> void:
 
 	if pause_modal:
 		pause_modal.apply_theme(data)
+
+	if is_instance_valid(campaign_menu):
+		campaign_menu.apply_theme(data)
 
 
 # ============================================================
@@ -751,8 +762,8 @@ func _drain_network_move_queue() -> void:
 		if (
 			coord.x < 0
 			or coord.y < 0
-			or coord.x >= BoardData.GRID_SIZE
-			or coord.y >= BoardData.GRID_SIZE
+			or coord.x >= board_data.grid_size
+			or coord.y >= board_data.grid_size
 		):
 			push_warning(
 				"Relay прислал координаты вне поля: %s" % coord
@@ -836,10 +847,12 @@ func _start_game(starting_player: Enums.Player) -> void:
 		else:
 			hud.set_player_avatars(my_tex, null)
 
-	board_data.reset()
+	var board_size := campaign_level.board_size if campaign_level != null else BoardData.GRID_SIZE
+	board_data = BoardData.new(board_size)
+	_moves_made = 0
 	turn_manager.reset()
 	score_manager.reset()
-	board_view.create_board()
+	board_view.create_board(board_size)
 	_on_theme_changed(theme_manager.current_theme)
 
 	if starting_player == Enums.Player.PLAYER_2:
@@ -882,8 +895,8 @@ func _execute_move(coord: Vector2i) -> void:
 	if (
 		coord.x < 0
 		or coord.y < 0
-		or coord.x >= BoardData.GRID_SIZE
-		or coord.y >= BoardData.GRID_SIZE
+		or coord.x >= board_data.grid_size
+		or coord.y >= board_data.grid_size
 	):
 		return
 
@@ -896,13 +909,17 @@ func _execute_move(coord: Vector2i) -> void:
 	board_data.set_cell(coord, active_player)
 	board_view.update_cell(coord, active_player)
 
+	# Метрики считаем только для игрока, чьи ходы учитываются.
+	var is_metrics_player := active_player == _get_metrics_player()
+
 	var detected_patterns := pattern_detector.check_patterns(
 		board_data,
 		coord
 	)
 	var result := score_manager.process_patterns(
 		detected_patterns,
-		active_player
+		active_player,
+		is_metrics_player
 	)
 
 	var scored_pattern: PatternInstance = result.get("pattern", null)
@@ -922,16 +939,22 @@ func _execute_move(coord: Vector2i) -> void:
 				true
 			)
 
-		await get_tree().createtimer(0.5).timeout
+		await get_tree().create_timer(0.5).timeout
+
+	# Кампания: считаем ходы и проверяем досрочное завершение.
+	if campaign_level != null and is_metrics_player:
+		_moves_made += 1
+		if _check_campaign_finish():
+			return
 
 	if (
 		board_data.get_occupied_count()
-		>= BoardData.GRID_SIZE * BoardData.GRID_SIZE
+		>= board_data.grid_size * board_data.grid_size
 	):
 		_end_game()
-	else:
+	elif campaign_level == null or campaign_level.bot_difficulty >= 0:
+		# В головоломке ход не передаётся, остальные режимы — как раньше.
 		turn_manager.next_turn()
-
 
 func _on_turn_changed(new_player: Enums.Player) -> void:
 	var active_local_player := human_player
@@ -1081,10 +1104,14 @@ func _end_game() -> void:
 
 	var match_completed := (
 		board_data.get_occupied_count()
-		>= BoardData.GRID_SIZE * BoardData.GRID_SIZE
+		>= board_data.grid_size * board_data.grid_size
 	)
 
 	is_game_over = true
+
+	# Кампания: отправляем результат, CampaignManager сохраняет звёзды.
+	if campaign_level != null:
+		GameEvents.match_finished.emit(_build_campaign_result())
 
 	if pause_button:
 		pause_button.visible = false
@@ -1092,6 +1119,10 @@ func _end_game() -> void:
 	if save_manager:
 		save_manager.set_playtime_active(false)
 		save_manager.flush_playtime()
+
+	if campaign_level != null:
+		_show_campaign_end()
+		return
 
 	var result_player := human_player
 
@@ -1144,7 +1175,31 @@ func _end_game() -> void:
 	)
 
 
+func _show_campaign_end() -> void:
+	var result := _build_campaign_result()
+	var won := campaign_level.evaluate(result) > 0
+
+	if won:
+		audio_manager.play_win()
+	else:
+		audio_manager.play_lose()
+
+	var next_level := _get_next_campaign_level() if won else null
+	result_screen.show_campaign_result(campaign_level, result, next_level)
+
+
+func _get_next_campaign_level() -> LevelDefinition:
+	var levels := CampaignManager.get_levels()
+	for i in levels.size():
+		if levels[i].id == campaign_level.id and i + 1 < levels.size():
+			return levels[i + 1]
+	return null
+
+
 func _restart_game() -> void:
+	if campaign_level != null:
+		start_campaign_level(campaign_level)
+		return
 	get_tree().paused = false
 
 	if current_mode == Enums.GameMode.LAN_PVP:
@@ -1194,3 +1249,102 @@ func _on_bot_settings_confirmed(
 			)
 
 	_start_game(starting_player)
+
+# ============================================================
+# КАМПАНИЯ
+# ============================================================
+
+func start_campaign_level(level: LevelDefinition) -> void:
+	campaign_level = level
+	human_player = Enums.Player.PLAYER_1
+	player1_name = main_menu.get_nickname()
+
+	if level.bot_difficulty >= 0:
+		# Бот-уровень: используем обычную логику VS_BOT.
+		current_mode = Enums.GameMode.VS_BOT
+		bot_difficulty = level.bot_difficulty as Enums.BotDifficulty
+		bot_player = Enums.Player.PLAYER_2
+		player2_name = "Бот"
+	else:
+		# Головоломка: одна сторона ставит все клетки, ход не передаётся.
+		current_mode = Enums.GameMode.LOCAL_PVP
+		bot_player = Enums.Player.NONE
+		player2_name = "—"
+
+	_start_game(Enums.Player.PLAYER_1)
+
+
+# Чьи ходы и фигуры считаются для метрик кампании.
+func _get_metrics_player() -> Enums.Player:
+	if current_mode == Enums.GameMode.LAN_PVP:
+		return local_net_player
+	return human_player
+
+
+func _build_campaign_result() -> MatchResult:
+	var me := _get_metrics_player()
+	var my_score: int = score_manager.p1_score if me == Enums.Player.PLAYER_1 else score_manager.p2_score
+	var opp_score: int = score_manager.p2_score if me == Enums.Player.PLAYER_1 else score_manager.p1_score
+
+	var result := MatchResult.new()
+	result.mode = &"campaign"
+	result.level_id = campaign_level.id
+	result.bot_difficulty = campaign_level.bot_difficulty
+	result.local_score = my_score
+	result.local_player_won = my_score > opp_score
+	result.moves = _moves_made
+	result.pattern_counts = score_manager.pattern_counts.duplicate()
+	return result
+
+
+# Досрочное завершение: все обязательные цели выполнены или закончился лимит ходов.
+func _check_campaign_finish() -> bool:
+	var result := _build_campaign_result()
+
+	if campaign_level.evaluate(result) > 0:
+		_end_game()
+		return true
+
+	if campaign_level.max_moves > 0 and _moves_made >= campaign_level.max_moves:
+		_end_game()
+		return true
+
+	return false
+
+func _setup_campaign_menu() -> void:
+	# CanvasLayer даёт меню размер всего окна: Node2D сам по себе не задаёт размер для Control.
+	var campaign_layer := CanvasLayer.new()
+	campaign_layer.name = "CampaignLayer"
+	campaign_layer.layer = 20
+	add_child(campaign_layer)
+
+	campaign_menu = CampaignMenu.new()
+	campaign_layer.add_child(campaign_menu)
+	campaign_menu.level_selected.connect(_on_campaign_level_selected)
+	campaign_menu.back_requested.connect(_on_campaign_back)
+	main_menu.campaign_requested.connect(_on_campaign_requested)
+	# Переход на следующий уровень сначала открывает экран его условий.
+	result_screen.next_level_requested.connect(_on_campaign_next_level_requested)
+
+func _on_campaign_requested() -> void:
+	main_menu.hide_menu()
+	campaign_menu.open()
+
+func _on_campaign_back() -> void:
+	campaign_menu.close()
+	main_menu.open_menu()
+	main_menu.show_mode_section()
+
+func _on_campaign_level_selected(level: LevelDefinition) -> void:
+	# Вызывается только после нажатия «Продолжить» на экране условий.
+	campaign_menu.close()
+	start_campaign_level(level)
+
+
+func _on_campaign_next_level_requested(level: LevelDefinition) -> void:
+	if level == null:
+		return
+
+	get_tree().paused = false
+	result_screen.hide_results()
+	campaign_menu.open_level_preparation(level)

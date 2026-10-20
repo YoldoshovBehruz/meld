@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://bfkxa5w4gue7f"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_7jkqw"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_b80ek"]
+
+[sub_resource type="Resource" id="Resource_7jkqw"]
+script = ExtResource("1_7jkqw")
+metric = 1
+op = 1
+target = 8
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_b80ek"]
+script = ExtResource("1_7jkqw")
+metric = 1
+op = 1
+target = 7
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_x05cj"]
+script = ExtResource("1_7jkqw")
+metric = 6
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_b80ek")
+id = &"lvl_16"
+title = "Узкий коридор"
+order = 6
+board_size = 6
+max_moves = 10
+required = Array[ExtResource("1_7jkqw")]([SubResource("Resource_x05cj")])
+bonus = Array[ExtResource("1_7jkqw")]([SubResource("Resource_7jkqw"), SubResource("Resource_b80ek")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

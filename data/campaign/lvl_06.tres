@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://duq31gsgnha62"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_p86bn"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_l1wg5"]
+
+[sub_resource type="Resource" id="Resource_p86bn"]
+script = ExtResource("1_p86bn")
+metric = 1
+op = 1
+target = 15
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_l1wg5"]
+script = ExtResource("1_p86bn")
+metric = 4
+target = 2
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_yrubt"]
+script = ExtResource("1_p86bn")
+target = 10
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_l1wg5")
+id = &"lvl_06"
+title = "Счёт 10"
+order = 4
+max_moves = 20
+required = Array[ExtResource("1_p86bn")]([SubResource("Resource_yrubt")])
+bonus = Array[ExtResource("1_p86bn")]([SubResource("Resource_p86bn"), SubResource("Resource_l1wg5")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

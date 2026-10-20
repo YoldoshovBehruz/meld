@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=6 format=3 uid="uid://iwvp8hxktlh6"]
+
+[ext_resource type="Script" uid="uid://bslgjthc46yvs" path="res://scripts/campaign/level_objective.gd" id="1_nskdm"]
+[ext_resource type="Script" uid="uid://bg4tkqy00mdpa" path="res://scripts/campaign/level_definition.gd" id="2_kfv2x"]
+
+[sub_resource type="Resource" id="Resource_nskdm"]
+script = ExtResource("1_nskdm")
+metric = 1
+op = 1
+target = 9
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_kfv2x"]
+script = ExtResource("1_nskdm")
+metric = 4
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[sub_resource type="Resource" id="Resource_dqbdp"]
+script = ExtResource("1_nskdm")
+metric = 5
+metadata/_custom_type_script = "uid://bslgjthc46yvs"
+
+[resource]
+script = ExtResource("2_kfv2x")
+id = &"lvl_05"
+title = "Обратный взгляд"
+order = 3
+max_moves = 12
+required = Array[ExtResource("1_nskdm")]([SubResource("Resource_dqbdp")])
+bonus = Array[ExtResource("1_nskdm")]([SubResource("Resource_nskdm"), SubResource("Resource_kfv2x")])
+metadata/_custom_type_script = "uid://bg4tkqy00mdpa"

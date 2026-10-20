@@ -3,6 +3,7 @@ class_name LevelDefinition
 extends Resource
 
 @export var id: StringName
+@export var title: String = ""
 @export var order: int = 0
 @export var board_size: int = 10
 @export var max_moves: int = 0

@@ -2,6 +2,7 @@ class_name MainMenu
 extends Control
 
 signal mode_selected(mode: Enums.GameMode)
+signal campaign_requested
 signal settings_requested
 signal nickname_changed(new_name: String)
 
@@ -59,6 +60,9 @@ var _current_banner_path: String = ""
 var name_input: LineEdit
 var current_nickname: String = "Игрок"
 var _device_id: String = ""
+
+# Кампания
+var _campaign_button: Button = null
 
 @onready var main_container: VBoxContainer = %MainContainer
 @onready var mode_container: VBoxContainer = %ModeContainer
@@ -1169,7 +1173,23 @@ func show_mode_section() -> void:
 	mode_container.visible = true
 
 
+func _setup_campaign_button() -> void:
+	if _campaign_button != null or mode_container == null or vs_bot_button == null:
+		return
+	_campaign_button = Button.new()
+	_campaign_button.name = "CampaignButton"
+	mode_container.add_child(_campaign_button)
+	mode_container.move_child(_campaign_button, vs_bot_button.get_index())
+	_campaign_button.pressed.connect(_on_campaign_pressed)
+	_style_button(_campaign_button, "КАМПАНИЯ", Color("#F4C542"), Color("#FFD966"), Color("#C9A227"), Color("#2b2b2b"))
+
+
+func _on_campaign_pressed() -> void:
+	campaign_requested.emit()
+
+
 func _connect_signals() -> void:
+	_setup_campaign_button()
 	_bind_button(play_button, _on_play_pressed)
 	if settings_button:
 		_bind_button(settings_button, _on_settings_pressed)
@@ -1194,20 +1214,26 @@ func _bind_button(btn: Button, method: Callable) -> void:
 func _on_play_pressed() -> void:
 	show_mode_section()
 
+
 func _on_settings_pressed() -> void:
 	settings_requested.emit()
+
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
 
+
 func _on_local_pvp_pressed() -> void:
 	mode_selected.emit(Enums.GameMode.LOCAL_PVP)
+
 
 func _on_vs_bot_pressed() -> void:
 	mode_selected.emit(Enums.GameMode.VS_BOT)
 
+
 func _on_lan_pvp_pressed() -> void:
 	mode_selected.emit(Enums.GameMode.LAN_PVP)
+
 
 func _on_back_pressed() -> void:
 	show_main_section()
