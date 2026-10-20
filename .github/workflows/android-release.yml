@@ -53,10 +53,10 @@ jobs:
           if [ -d "android/plugins/MeldInstaller" ]; then
             cd android/plugins/MeldInstaller
             
-            # Генерация gradle wrapper, если его нет в репозитории
+            # Генерация gradle wrapper версии 8.7 (требуется для AGP 8.5.0+)
             if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
               echo "Gradle wrapper jar missing. Generating wrapper..."
-              gradle wrapper --gradle-version 8.0 || true
+              gradle wrapper --gradle-version 8.7 || true
             fi
             
             if [ -f "gradlew" ]; then
