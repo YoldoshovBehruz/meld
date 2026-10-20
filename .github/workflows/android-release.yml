@@ -81,15 +81,51 @@ jobs:
       - name: Prepare Export Configuration & Version
         run: |
           python3 -c '
-          import configparser
-          config = configparser.ConfigParser(strict=False)
-          config.read("export_presets.cfg")
-          if "preset.0" in config:
-              config["preset.0"]["export_options/use_gradle_build"] = "true"
-              config["preset.0"]["export_options/target_sdk"] = "33"
-              config["preset.0"]["export_options/build_tools_version"] = "\"33.0.2\""
-          with open("export_presets.cfg", "w") as configfile:
-              config.write(configfile)
+          filename = "export_presets.cfg"
+          with open(filename, "r", encoding="utf-8") as f:
+              lines = f.readlines()
+
+          new_lines = []
+          current_section = None
+          target_keys = {
+              "export_options/use_gradle_build": "true",
+              "export_options/target_sdk": "\"33\"",
+              "export_options/build_tools_version": "\"33.0.2\""
+          }
+          updated_keys = set()
+
+          i = 0
+          while i < len(lines):
+              line = lines[i]
+              stripped = line.strip()
+              if stripped.startswith("[") and stripped.endswith("]"):
+                  if current_section == "preset.0":
+                      for k, v in target_keys.items():
+                          if k not in updated_keys:
+                              new_lines.append(f"{k} = {v}\n")
+                  current_section = stripped[1:-1]
+                  new_lines.append(line)
+                  i += 1
+                  continue
+
+              if current_section == "preset.0" and "=" in line:
+                  key = line.split("=", 1)[0].strip()
+                  if key in target_keys:
+                      new_lines.append(f"{key} = {target_keys[key]}\n")
+                      updated_keys.add(key)
+                      i += 1
+                      continue
+
+              new_lines.append(line)
+              i += 1
+
+          if current_section == "preset.0":
+              for k, v in target_keys.items():
+                  if k not in updated_keys:
+                      new_lines.append(f"{k} = {v}\n")
+
+          with open(filename, "w", encoding="utf-8") as f:
+              f.writelines(new_lines)
           '
 
       - name: Initialize Project & Import Assets
