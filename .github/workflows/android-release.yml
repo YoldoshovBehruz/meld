@@ -131,35 +131,24 @@ jobs:
       - name: Configure Godot Editor Settings (Java SDK)
         run: |
           python3 -c '
-          import os, configparser
-          # Находим путь к java в системе
-          import subprocess
+          import os, subprocess
           java_path = subprocess.check_output(["which", "java"]).decode("utf-8").strip()
-          # Обычно путь к jdk — это родительская папка bin/java
           java_home = os.path.dirname(os.path.dirname(os.path.realpath(java_path)))
-          
           print(f"Detected Java Home: {java_home}")
           
-          # Путь к настройкам редактора Godot в контейнере (обычно ~/.config/godot или ~/.local/share/godot)
-          # Создаем пустой конфиг или дописываем туда путь к Java
           config_dir = os.path.expanduser("~/.config/godot")
           os.makedirs(config_dir, exist_ok=True)
-          
-          # Для Godot 4 настройки редактора хранятся в editor_settings-4.tres (текстовый формат variant/resource)
-          # Простейший способ подсунуть путь через командную строку или конфигурационный файл:
-          # Запишем настройки в editor_settings.tres если он есть, либо создадим
           setting_file = os.path.join(config_dir, "editor_settings-4.tres")
           
-          # Вместо сложного парсинга tres файлов, передадим путь через переменные окружения или создадим минимальный tres
-          tres_content = """[gd_resource type=\"EditorSettings\" format=3]
-
-[resource]
-export/android/java_sdk_path = \"%s\"
-""" % java_home
-
-          with open(setting_file, "w") as f:
+          tres_content = (
+              "[gd_resource type=\"EditorSettings\" format=3]\n\n"
+              "[resource]\n"
+              f"export/android/java_sdk_path = \"{java_home}\"\n"
+          )
+          
+          with open(setting_file, "w", encoding="utf-8") as f:
               f.write(tres_content)
-          print("Editor settings written with Java path.")
+          print("Editor settings written successfully.")
           '
 
       - name: Initialize Project & Import Assets
