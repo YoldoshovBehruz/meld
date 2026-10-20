@@ -76,7 +76,6 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST and _overlay.visible and not _forced:
 		_hide_offer()
 
-
 func _process(_delta: float) -> void:
 	if not _downloading:
 		return
