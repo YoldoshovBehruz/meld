@@ -15,9 +15,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies (FontConfig, curl, gradle)
+      - name: Install System Dependencies (FontConfig, curl, gradle, openjdk)
         run: |
-          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl gradle
+          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl gradle openjdk-17-jdk
 
       - name: Setup Android SDK & Build Templates
         run: |
@@ -126,6 +126,40 @@ jobs:
 
           with open(filename, "w", encoding="utf-8") as f:
               f.writelines(new_lines)
+          '
+
+      - name: Configure Godot Editor Settings (Java SDK)
+        run: |
+          python3 -c '
+          import os, configparser
+          # Находим путь к java в системе
+          import subprocess
+          java_path = subprocess.check_output(["which", "java"]).decode("utf-8").strip()
+          # Обычно путь к jdk — это родительская папка bin/java
+          java_home = os.path.dirname(os.path.dirname(os.path.realpath(java_path)))
+          
+          print(f"Detected Java Home: {java_home}")
+          
+          # Путь к настройкам редактора Godot в контейнере (обычно ~/.config/godot или ~/.local/share/godot)
+          # Создаем пустой конфиг или дописываем туда путь к Java
+          config_dir = os.path.expanduser("~/.config/godot")
+          os.makedirs(config_dir, exist_ok=True)
+          
+          # Для Godot 4 настройки редактора хранятся в editor_settings-4.tres (текстовый формат variant/resource)
+          # Простейший способ подсунуть путь через командную строку или конфигурационный файл:
+          # Запишем настройки в editor_settings.tres если он есть, либо создадим
+          setting_file = os.path.join(config_dir, "editor_settings-4.tres")
+          
+          # Вместо сложного парсинга tres файлов, передадим путь через переменные окружения или создадим минимальный tres
+          tres_content = """[gd_resource type=\"EditorSettings\" format=3]
+
+[resource]
+export/android/java_sdk_path = \"%s\"
+""" % java_home
+
+          with open(setting_file, "w") as f:
+              f.write(tres_content)
+          print("Editor settings written with Java path.")
           '
 
       - name: Initialize Project & Import Assets
