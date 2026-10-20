@@ -82,7 +82,7 @@ jobs:
         run: |
           python3 -c '
           import configparser
-          config = configparser.ConfigParser()
+          config = configparser.ConfigParser(strict=False)
           config.read("export_presets.cfg")
           if "preset.0" in config:
               config["preset.0"]["export_options/use_gradle_build"] = "true"
