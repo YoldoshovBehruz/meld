@@ -161,7 +161,7 @@ jobs:
 
       - name: Export Android APK
         run: |
-          godot --headless --export-release "Android" build/release/meld.apk
+          godot --headless --export-debug "Android" build/release/meld.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
