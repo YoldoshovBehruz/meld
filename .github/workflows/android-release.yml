@@ -1,192 +1,242 @@
-name: Build Android Release
+name: Android release
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
+  build:
+    name: Build and verify APK
+    runs-on: ubuntu-24.04
     container:
       image: barichello/godot-ci:4.5.1
+    outputs:
+      version_name: ${{ steps.version.outputs.version_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install System Dependencies (FontConfig, curl, gradle, openjdk)
+      - name: Set version and configure export presets
+        id: version
+        shell: bash
         run: |
-          apt-get update && apt-get install -y libfontconfig1 unzip python3 curl gradle openjdk-17-jdk
-
-      - name: Setup Android SDK & Build Templates
-        run: |
-          GODOT_VERSION="4.5.1.stable"
-          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/$GODOT_VERSION"
+          set -euo pipefail
+          VERSION_NAME=$(grep -E '^config/version=' project.godot | head -n1 | cut -d'"' -f2)
+          VERSION_CODE="$GITHUB_RUN_NUMBER"
+          test -n "$VERSION_NAME"
           
-          mkdir -p "$TEMPLATE_DIR"
+          # Обновляем версию в export_presets.cfg (поддерживаем разные варианты ключей)
+          sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg || true
+          sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg || true
           
-          # Скачиваем официальные шаблоны экспорта Godot 4.5.1
-          wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
-          
-          # Распаковываем во временную папку
-          unzip -q templates.tpz -d temp_templates
-          
-          # Копируем содержимое в целевую директорию Godot
-          cp -r temp_templates/templates/* "$TEMPLATE_DIR/"
-          
-          # Распаковываем android_source.zip в папку android/build проекта для Custom Build
-          mkdir -p android/build
-          if [ -f "$TEMPLATE_DIR/android_source.zip" ]; then
-            unzip -q "$TEMPLATE_DIR/android_source.zip" -J -d android/build || unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build
-            echo "Android source successfully extracted."
-          else
-            echo "Error: android_source.zip not found in $TEMPLATE_DIR!"
-            ls -la "$TEMPLATE_DIR"
-            exit 1
+          if grep -q "gradle_build/use_gradle_build" export_presets.cfg; then
+            sed -i -E 's/gradle_build\/use_gradle_build=.*/gradle_build\/use_gradle_build=true/' export_presets.cfg
           fi
+          if grep -q "target_sdk=" export_presets.cfg; then
+            sed -i -E 's/target_sdk=.*/target_sdk=33/' export_presets.cfg
+          fi
+          if grep -q "build_tools_version=" export_presets.cfg; then
+            sed -i -E 's/build_tools_version=.*/build_tools_version="33.0.2"/' export_presets.cfg
+          fi
+          
+          printf '{"version_name":"%s","version_code":%s}\n' \
+            "$VERSION_NAME" "$VERSION_CODE" > build_info.json
+            
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
+      # --- СБОРКА НАТИВНОГО ПЛАГИНА (AAR) НА СЕРВЕРЕ GITHUB ---
       - name: Build MeldInstaller AAR plugin
         shell: bash
         run: |
           set -euo pipefail
-          if [ -d "android/plugins/MeldInstaller" ]; then
-            cd android/plugins/MeldInstaller
-            
-            # Генерация gradle wrapper версии 8.7 (требуется для AGP 8.5.0+)
-            if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-              echo "Gradle wrapper jar missing. Generating wrapper..."
-              gradle wrapper --gradle-version 8.7 || true
-            fi
-            
-            if [ -f "gradlew" ]; then
-              chmod +x gradlew
-              ./gradlew assembleRelease --no-daemon
-            else
-              gradle assembleRelease --no-daemon
-            fi
-            
-            mkdir -p build/outputs/aar
-            if compgen -G "build/outputs/aar/*-release.aar" > /dev/null; then
-              cp build/outputs/aar/*-release.aar MeldInstaller.aar
-            elif compgen -G "build/outputs/aar/*.aar" > /dev/null; then
-              cp build/outputs/aar/*.aar MeldInstaller.aar
-            else
-              echo "Error: AAR file not found after build!"
-              exit 1
-            fi
-            cd ../../..
-          fi
-
-      - name: Prepare Export Configuration & Version
-        run: |
-          python3 -c '
-          filename = "export_presets.cfg"
-          with open(filename, "r", encoding="utf-8") as f:
-              lines = f.readlines()
-
-          new_lines = []
-          current_section = None
-          target_keys = {
-              "export_options/use_gradle_build": "true",
-              "export_options/target_sdk": "\"33\"",
-              "export_options/build_tools_version": "\"33.0.2\""
-          }
-          updated_keys = set()
-
-          i = 0
-          while i < len(lines):
-              line = lines[i]
-              stripped = line.strip()
-              if stripped.startswith("[") and stripped.endswith("]"):
-                  if current_section == "preset.0":
-                      for k, v in target_keys.items():
-                          if k not in updated_keys:
-                              new_lines.append(f"{k} = {v}\n")
-                  current_section = stripped[1:-1]
-                  new_lines.append(line)
-                  i += 1
-                  continue
-
-              if current_section == "preset.0" and "=" in line:
-                  key = line.split("=", 1)[0].strip()
-                  if key in target_keys:
-                      new_lines.append(f"{key} = {target_keys[key]}\n")
-                      updated_keys.add(key)
-                      i += 1
-                      continue
-
-              new_lines.append(line)
-              i += 1
-
-          if current_section == "preset.0":
-              for k, v in target_keys.items():
-                  if k not in updated_keys:
-                      new_lines.append(f"{k} = {v}\n")
-
-          with open(filename, "w", encoding="utf-8") as f:
-              f.writelines(new_lines)
-          '
-
-      - name: Configure Godot Editor Settings (Java SDK)
-        run: |
-          python3 -c '
-          import os, subprocess
-          java_path = subprocess.check_output(["which", "java"]).decode("utf-8").strip()
-          java_home = os.path.dirname(os.path.dirname(os.path.realpath(java_path)))
-          print(f"Detected Java Home: {java_home}")
+          cd android/plugins/MeldInstaller
           
-          config_dir = os.path.expanduser("~/.config/godot")
-          os.makedirs(config_dir, exist_ok=True)
-          setting_file = os.path.join(config_dir, "editor_settings-4.tres")
+          # Скачиваем и распаковываем Gradle 8.8 прямо в окружение сборки
+          wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip
+          unzip -q gradle-8.8-bin.zip
+          export PATH="$PWD/gradle-8.8/bin:$PATH"
           
-          tres_content = (
-              "[gd_resource type=\"EditorSettings\" format=3]\n\n"
-              "[resource]\n"
-              f"export/android/java_sdk_path = \"{java_home}\"\n"
-          )
-          
-          with open(setting_file, "w", encoding="utf-8") as f:
-              f.write(tres_content)
-          print("Editor settings written successfully.")
-          '
+          gradle assembleRelease --no-daemon
+          cp build/outputs/aar/*-release.aar MeldInstaller.aar
+          cd ../../..
 
-      - name: Initialize Project & Import Assets
+      - name: Restore release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          mkdir -p build
+          echo "$KEYSTORE_B64" | base64 -d > build/release.keystore
+
+      - name: Download Godot Android export templates and setup build template
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # Устанавливаем libfontconfig1 для устранения ошибок шрифтов
+          apt-get update && apt-get install -y libfontconfig1 || true
+          TEMPLATE_DIR="/github/home/.local/share/godot/export_templates/4.5.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          
+          # Скачиваем официальные экспортные шаблоны Godot 4.5.1
+          wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
+          unzip -q templates.tpz
+          
+          # Переносим файлы в системную папку шаблонов
+          mv templates/* "$TEMPLATE_DIR/"
+          
+          # РАСПАКОВЫВАЕМ ШАБЛОН СТРОГО В android/build/ ДЛЯ GODOT 4 CUSTOM BUILD
+          mkdir -p android/build
+          unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build/
+          
+          rm -rf templates templates.tpz
+
+      - name: Configure Godot Editor Settings for Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/godot
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+          cat << EOF > ~/.config/godot/editor_settings-4.tres
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/java_sdk_path = "$JAVA_PATH"
+          EOF
+
+      - name: Initialize Godot project filesystem
+        shell: bash
+        run: |
+          set -euo pipefail
           godot --headless --editor --quit
 
-      - name: Create Release APK Directory
-        run: |
-          mkdir -p build/release
-
-      - name: Export Android APK
-        run: |
-          godot --headless --export-debug "Android" build/release/meld.apk
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: meld-release-apk
-          path: build/release/meld.apk
-
-      - name: Send Telegram Notification
-        if: always()
+      - name: Export release APK
+        shell: bash
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: build/release.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.ANDROID_KEYSTORE_USER }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-            STATUS="${{ job.status }}"
-            if [ "$STATUS" == "success" ]; then
-              TEXT="✅ *Сборка Android (Meld) успешно завершена!*%0A📦 Репозиторий: $GITHUB_REPOSITORY%0A🔗 Ветка: $GITHUB_REF_NAME"
-            else
-              TEXT="❌ *Сборка Android (Meld) завершилась с ошибкой!*%0A📦 Репозиторий: $GITHUB_REPOSITORY%0A🔗 Ветка: $GITHUB_REF_NAME"
-            fi
-            
-            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-              -d "chat_id=$TELEGRAM_CHAT_ID" \
-              -d "text=$TEXT" \
-              -d "parse_mode=Markdown"
-          else
-            echo "Telegram secrets not configured, skipping notification."
+          set -euo pipefail
+          mkdir -p build
+          godot --headless --verbose --export-release "Android" build/Meld.apk
+          test -s build/Meld.apk
+
+      - name: Verify signature matches the expected release key
+        shell: bash
+        env:
+          EXPECTED_CERT_SHA256: ${{ secrets.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n1)
+          "$APKSIGNER" verify --print-certs build/Meld.apk > cert.txt
+          ACTUAL=$(grep -i 'SHA-256 digest' cert.txt | head -n1 | awk '{print $NF}' | tr -d ':' | tr 'A-F' 'a-f')
+          EXPECTED=$(echo "$EXPECTED_CERT_SHA256" | tr -d ':' | tr 'A-F' 'a-f')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Certificate mismatch: updates would break for players."
+            exit 1
           fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meld-apk
+          path: build/Meld.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
+      VERSION_CODE: ${{ needs.build.outputs.version_code }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: meld-apk
+          path: dist
+
+      - name: Generate update manifest
+        run: |
+          set -euo pipefail
+          APK_NAME="Meld-${VERSION_CODE}.apk"
+          TAG="android-${VERSION_CODE}"
+          mv dist/Meld.apk "dist/${APK_NAME}"
+          SHA256=$(sha256sum "dist/${APK_NAME}" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "dist/${APK_NAME}")
+          APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
+          git log -1 --pretty=%B > dist/notes.md
+          
+          MANDATORY=$(jq -r '.mandatory' update_policy.json)
+          MIN_CODE=$(jq -r '.min_supported_version_code' update_policy.json)
+          
+          jq -n \
+            --arg name "$VERSION_NAME" \
+            --argjson code "$VERSION_CODE" \
+            --argjson min "$MIN_CODE" \
+            --argjson mandatory "$MANDATORY" \
+            --arg url "$APK_URL" \
+            --arg sha "$SHA256" \
+            --argjson size "$SIZE" \
+            --arg notes "$(cat dist/notes.md)" \
+            '{version_name:$name, version_code:$code,              min_supported_version_code:$min, mandatory:$mandatory,              apk_url:$url, sha256:$sha, size_bytes:$size, changelog:$notes}' \
+            > dist/update.json
+            
+          jq -e '.min_supported_version_code <= .version_code' dist/update.json
+
+      - name: Create draft release with APK
+        run: |
+          gh release create "android-${VERSION_CODE}" "dist/Meld-${VERSION_CODE}.apk" \
+            --draft --target "$GITHUB_SHA" \
+            --title "Meld ${VERSION_NAME} (${VERSION_CODE})" \
+            --notes-file dist/notes.md
+
+      - name: Attach update manifest
+        run: gh release upload "android-${VERSION_CODE}" dist/update.json
+
+      - name: Publish release (becomes /releases/latest)
+        run: gh release edit "android-${VERSION_CODE}" --draft=false --latest
+
+      - name: Remove draft if anything failed
+        if: failure()
+        run: gh release delete "android-${VERSION_CODE}" --yes --cleanup-tag || true
+
+  notify:
+    name: Telegram notification
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    env:
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
+      VERSION_CODE: ${{ needs.build.outputs.version_code }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send message
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          NOTES=$(git log -1 --pretty=%B | cut -c1-1000)
+          TEXT=$(printf 'Meld %s (сборка %s) опубликована.\n\n%s\n\nhttps://github.com/%s/releases/tag/android-%s' \
+            "$VERSION_NAME" "$VERSION_CODE" "$NOTES" "$GITHUB_REPOSITORY" "$VERSION_CODE")
+          
+          curl -sS --fail -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "message_thread_id=216" \
+            --data-urlencode "text=${TEXT}" \
+            --data-urlencode "disable_web_page_preview=true" > /dev/null
