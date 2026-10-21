@@ -30,11 +30,11 @@ jobs:
           VERSION_NAME=$(grep -E '^config/version=' project.godot | head -n1 | cut -d'"' -f2)
           VERSION_CODE="$GITHUB_RUN_NUMBER"
           test -n "$VERSION_NAME"
-          
+
           # Безопасно обновляем параметры в export_presets.cfg через sed
           sed -i -E "s/^version\/code=.*/version\/code=${VERSION_CODE}/" export_presets.cfg || true
           sed -i -E "s/^version\/name=.*/version\/name=\"${VERSION_NAME}\"/" export_presets.cfg || true
-          
+
           if grep -q "gradle_build/use_gradle_build" export_presets.cfg; then
             sed -i -E 's/gradle_build\/use_gradle_build=.*/gradle_build\/use_gradle_build=true/' export_presets.cfg
           fi
@@ -44,17 +44,17 @@ jobs:
           if grep -q "build_tools_version=" export_presets.cfg; then
             sed -i -E 's/build_tools_version=.*/build_tools_version="33.0.2"/' export_presets.cfg
           fi
-          
+
           # Гарантированно включаем плагин MeldInstaller в пресеты
           if grep -q "plugins/MeldInstaller=" export_presets.cfg; then
             sed -i -E 's/plugins\/MeldInstaller=.*/plugins\/MeldInstaller=true/' export_presets.cfg
           else
             sed -i '/\[preset.0.options\]/a plugins/MeldInstaller=true' export_presets.cfg
           fi
-          
+
           printf '{"version_name":"%s","version_code":%s}\n' \
             "$VERSION_NAME" "$VERSION_CODE" > build_info.json
-            
+
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
@@ -64,15 +64,27 @@ jobs:
         run: |
           set -euo pipefail
           cd android/plugins/MeldInstaller
-          
+
           # Скачиваем и распаковываем Gradle 8.8 прямо в окружение сборки
           wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip
           unzip -q gradle-8.8-bin.zip
           export PATH="$PWD/gradle-8.8/bin:$PATH"
-          
+
           gradle assembleRelease --no-daemon
-          cp build/outputs/aar/*-release.aar MeldInstaller.aar
+
+          # FIX: AAR должен лежать в android/plugins/ рядом с MeldInstaller.gdap,
+          # а не во вложенной папке MeldInstaller/
+          cp build/outputs/aar/*-release.aar ../MeldInstaller.aar
           cd ../../..
+
+      # FIX: проверяем, что плагин на месте, до экспорта
+      - name: Verify plugin files are in place
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android/plugins/MeldInstaller.gdap
+          test -s android/plugins/MeldInstaller.aar
+          grep -q '^plugins/MeldInstaller=true' export_presets.cfg
 
       - name: Restore release keystore
         env:
@@ -85,23 +97,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          
+
           # Устанавливаем libfontconfig1 для устранения ошибок шрифтов
           apt-get update && apt-get install -y libfontconfig1 || true
           TEMPLATE_DIR="/github/home/.local/share/godot/export_templates/4.5.1.stable"
           mkdir -p "$TEMPLATE_DIR"
-          
+
           # Скачиваем официальные экспортные шаблоны Godot 4.5.1
           wget -q https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -O templates.tpz
           unzip -q templates.tpz
-          
+
           # Переносим файлы в системную папку шаблонов
           mv templates/* "$TEMPLATE_DIR/"
-          
+
           # РАСПАКОВЫВАЕМ ШАБЛОН СТРОГО В android/build/ ДЛЯ GODOT 4 CUSTOM BUILD
           mkdir -p android/build
           unzip -q "$TEMPLATE_DIR/android_source.zip" -d android/build/
-          
+
           rm -rf templates templates.tpz
 
       - name: Configure Godot Editor Settings for Android
@@ -134,6 +146,14 @@ jobs:
           mkdir -p build
           godot --headless --verbose --export-release "Android" build/Meld.apk
           test -s build/Meld.apk
+
+      # FIX: проверяем, что код плагина реально попал в APK
+      - name: Verify plugin is bundled in APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -p build/Meld.apk 'classes*.dex' > build/classes.bin
+          grep -qa 'MeldInstaller' build/classes.bin
 
       - name: Verify signature matches the expected release key
         shell: bash
@@ -186,10 +206,10 @@ jobs:
           SIZE=$(stat -c%s "dist/${APK_NAME}")
           APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
           git log -1 --pretty=%B > dist/notes.md
-          
+
           MANDATORY=$(jq -r '.mandatory' update_policy.json)
           MIN_CODE=$(jq -r '.min_supported_version_code' update_policy.json)
-          
+
           jq -n \
             --arg name "$VERSION_NAME" \
             --argjson code "$VERSION_CODE" \
@@ -199,9 +219,9 @@ jobs:
             --arg sha "$SHA256" \
             --argjson size "$SIZE" \
             --arg notes "$(cat dist/notes.md)" \
-            '{version_name:$name, version_code:$code,              min_supported_version_code:$min, mandatory:$mandatory,              apk_url:$url, sha256:$sha, size_bytes:$size, changelog:$notes}' \
+            '{version_name:$name, version_code:$code, min_supported_version_code:$min, mandatory:$mandatory, apk_url:$url, sha256:$sha, size_bytes:$size, changelog:$notes}' \
             > dist/update.json
-            
+
           jq -e '.min_supported_version_code <= .version_code' dist/update.json
 
       - name: Create draft release with APK
@@ -241,7 +261,7 @@ jobs:
           NOTES=$(git log -1 --pretty=%B | cut -c1-1000)
           TEXT=$(printf 'Meld %s (сборка %s) опубликована.\n\n%s\n\nhttps://github.com/%s/releases/tag/android-%s' \
             "$VERSION_NAME" "$VERSION_CODE" "$NOTES" "$GITHUB_REPOSITORY" "$VERSION_CODE")
-          
+
           curl -sS --fail -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TG_CHAT}" \
             --data-urlencode "message_thread_id=216" \

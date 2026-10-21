@@ -8,8 +8,6 @@ android {
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 34
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     compileOptions {
@@ -17,7 +15,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
-
 dependencies {
     // Godot Android library подтягивается автоматически из окружения сборки
     compileOnly("org.godotengine:godot:4.5.0.stable")

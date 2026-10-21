@@ -4,8 +4,8 @@
 
     <application>
         <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.meld.installer"
+            android:name="com.meld.installer.MeldFileProvider"
+            android:authorities="${applicationId}.meldinstaller"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
