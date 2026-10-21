@@ -147,13 +147,17 @@ jobs:
           godot --headless --verbose --export-release "Android" build/Meld.apk
           test -s build/Meld.apk
 
-      # FIX: проверяем, что код плагина реально попал в APK
       - name: Verify plugin is bundled in APK
         shell: bash
         run: |
           set -euo pipefail
           unzip -p build/Meld.apk 'classes*.dex' > build/classes.bin
-          grep -qa 'MeldInstaller' build/classes.bin
+          if ! grep -qa 'com/meld/installer/' build/classes.bin; then
+            echo "Plugin classes (com/meld/installer) not found in APK dex."
+            echo "Check that MeldInstaller is enabled in export preset and the .aar is in android/plugins/."
+            exit 1
+          fi
+          echo "Plugin classes found in APK."
 
       - name: Verify signature matches the expected release key
         shell: bash
